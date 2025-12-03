@@ -171,11 +171,14 @@ nano .env
 
 Cole o mesmo conteúdo de `.env` que você usa localmente (token e IDs), salve e feche.
 
+ctr + o
+ctr + x
+
 ### Passo 7 – Testar o bot manualmente na VM
 
 Com o ambiente virtual ativo:
 
-python bot.py
+python bot_discord.py
 
 * Verifique no Discord se o bot ficou online.
 * Se estiver ok, pare o processo com Ctrl + C.
@@ -199,9 +202,9 @@ After=network.target
 
 [Service]
 Type=simple
-User=SEU_USUARIO
+User=gctecnologia2
 WorkingDirectory=/opt/discord-bot
-ExecStart=/opt/discord-bot/.venv/bin/python /opt/discord-bot/bot.py
+ExecStart=/opt/discord-bot/.venv/bin/python /opt/discord-bot/bot_discord.py
 Restart=always
 RestartSec=5
 StandardOutput=journal
