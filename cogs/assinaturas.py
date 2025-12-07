@@ -3,8 +3,7 @@ import discord
 from discord.ext import commands
 import datetime
 import logging
-from database import obter_assinatura, obter_resumo_assinaturas
-from utils import criar_embed_assinaturas, gerar_arquivo_assinaturas
+from database import DB_DATETIME_FORMAT, DISPLAY_FORMAT, LEGACY_DATETIME_FORMAT, obter_assinatura
 from views import RenovarAssinaturaView
 
 logger = logging.getLogger(__name__)
@@ -35,32 +34,58 @@ class AssinaturasCog(commands.Cog):
             color=discord.Color.green()
         )
         
+        def parse_datetime_compat(raw: str) -> datetime.datetime:
+            for fmt in (DB_DATETIME_FORMAT, LEGACY_DATETIME_FORMAT):
+                try:
+                    return datetime.datetime.strptime(raw, fmt)
+                except ValueError:
+                    continue
+            try: 
+                return datetime.datetime.strptime(raw[:10], "%d/%m/%Y")
+            except Exception:
+                return None
+        
+        dt_ativacao = parse_datetime_compat(assinatura['data_ativacao']) if assinatura['data_ativacao'] else None
+        dt_expiracao = parse_datetime_compat(assinatura['data_expiracao']) if assinatura['data_expiracao'] else None
+        
+        data_ativacao_str = dt_ativacao.strftime(DISPLAY_FORMAT) if dt_ativacao else "N/D"
+        data_expiracao_str = dt_expiracao.strftime(DISPLAY_FORMAT) if dt_expiracao else "N/D"
+        
         embed.add_field(name="👤 Usuário", value=ctx.author.mention, inline=True)
-        embed.add_field(name="📅 Data de Ativação", value=assinatura['data_ativacao'][:10], inline=True)
+        embed.add_field(name="📅 Data de Ativação", value=data_ativacao_str, inline=True)
         embed.add_field(name="📊 Plano", value=assinatura['plano'], inline=True)
-        embed.add_field(name="⏰ Expira em", value=assinatura['data_expiracao'][:10], inline=True)
+        embed.add_field(name="⏰ Expira em", value=data_expiracao_str, inline=True)
         embed.add_field(name="✅ Status", value=assinatura['status'], inline=True)
         
         # Calcular dias restantes
         try:
-            data_exp = datetime.datetime.strptime(assinatura['data_expiracao'][:10], "%d/%m/%Y").date()
-            hoje = datetime.datetime.now().date()
-            dias_restantes = (data_exp - hoje).days
+            if dt_expiracao:
+                data_exp = dt_expiracao.date()
+                hoje = datetime.datetime.now().date()
+                dias_restantes = (data_exp - hoje).days
+            else:
+                dias_restantes = None
             
             if dias_restantes > 0:
-                if dias_restantes > 30:
+                if dias_restantes > 7:
                     cor = "🟢"
-                    status_text = "OK"
-                elif dias_restantes > 5:
+                    status = "Tranquilo"
+                    detalhe = "Você ainda tem bastante tempo antes de vencer."
+                elif dias_restantes > 3:
                     cor = "🟡"
-                    status_text = "ATENÇÃO"
+                    status = "Planeje a renovação"
+                    detalhe = "Faltam poucos dias, já comece a se organizar."
                 else:
                     cor = "🔴"
-                    status_text = "URGENTE"
+                    status = "URGENTE"
+                    detalhe = (
+                        "Você começará (ou já começou) a receber lembretes automáticos.\n"
+                        "Não deixe para a última hora!"
+                    )
                 
                 embed.add_field(
                     name="⏳ Status da Renovação",
-                    value=f"{cor} **{dias_restantes} dias restantes**\n{status_text}",
+                    value=f"{cor} **{dias_restantes} dias restantes**\n{status}\n{detalhe}",
                     inline=False
                 )
             else:
@@ -73,7 +98,9 @@ class AssinaturasCog(commands.Cog):
         except:
             pass
         
-        embed.set_footer(text="Use !renovar para renovar sua assinatura")
+        embed.set_footer(
+            text="Lembretes automáticos são enviados com 3 dias de antecedência e no dia da expiração. Use !renovar para renovar sua assinatura."
+        )
         
         await ctx.send(embed=embed)
 

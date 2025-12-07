@@ -19,3 +19,4 @@ INTERVALO_CHECAGEM = 12  # horas
 # URLs
 URL_COMPRA = "https://gustavocorrea.com.br/"
 URL_SUPORTE = "https://t.me/suportegstv"
+URL_RENOVACAO = URL_COMPRA

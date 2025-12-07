@@ -4,6 +4,10 @@ import datetime
 from datetime import timedelta
 import logging
 
+DB_DATETIME_FORMAT = "%Y-%m-%d %H:%M:%S"
+LEGACY_DATETIME_FORMAT = "%d/%m/%Y %H:%M:%S"
+DISPLAY_FORMAT = "%d/%m/%Y"
+
 logger = logging.getLogger(__name__)
 
 def init_db():
@@ -50,8 +54,8 @@ def adicionar_assinatura(user_id: int, username: str, data_expiracao: datetime.d
         conn = sqlite3.connect('assinaturas.db')
         cursor = conn.cursor()
         
-        data_exp_str = data_expiracao.strftime("%d/%m/%Y %H:%M:%S")
-        data_ativacao = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        data_exp_str = data_expiracao.strftime(DB_DATETIME_FORMAT)
+        data_ativacao = datetime.datetime.now().strftime(DB_DATETIME_FORMAT)
         
         # VERIFICAR se o usuário já existe
         cursor.execute('SELECT user_id FROM assinaturas WHERE user_id = ?', (user_id,))
@@ -110,7 +114,7 @@ def registrar_aviso(user_id: int, tipo_aviso: str):
         conn = sqlite3.connect('assinaturas.db')
         cursor = conn.cursor()
         
-        data_aviso = datetime.datetime.now().strftime("%d/%m/%Y %H:%M:%S")
+        data_aviso =  datetime.datetime.now().strftime(DB_DATETIME_FORMAT)
         cursor.execute('''
             UPDATE assinaturas SET ultimo_aviso = ? WHERE user_id = ?
         ''', (data_aviso, user_id))
@@ -197,14 +201,14 @@ def obter_resumo_assinaturas():
         cursor.execute('SELECT * FROM assinaturas WHERE status = "EXPIRADA" ORDER BY data_expiracao')
         expiradas = cursor.fetchall()
         
-        # Assinaturas pendentes (a expirar em até 7 dias)
+        # Assinaturas pendentes (a expirar em até 5 dias)
         hoje = datetime.datetime.now().date()
-        limite = (hoje + timedelta(days=7)).strftime("%d/%m/%Y")
+        limite = (hoje + timedelta(days=5)).strftime("%Y-%m-%d")
         
         cursor.execute('''
             SELECT * FROM assinaturas 
             WHERE status = "ATIVA" 
-            AND substr(data_expiracao, 1, 10) <= ?
+            AND date(data_expiracao) <= ?
             ORDER BY data_expiracao
         ''', (limite,))
         pendentes = cursor.fetchall()

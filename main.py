@@ -103,4 +103,16 @@ async def on_member_update(before: discord.Member, after: discord.Member):
 
 if __name__ == "__main__":
     logger = setup_logging()
+    if not os.path.exists("assinaturas.db") or os.path.getsize("assinaturas.db") == 0:
+        logger.info("Arquivo 'assinaturas.db' não encontrado. Iniciando migração de membros...")
+        from migrar_membros_para_db import main as migrar_main
+        
+        try:
+            migrar_main()
+            logger.info("Migração concluída com sucesso. Iniciando o bot...")
+        except Exception as e:
+            logger.error(f"Erro ao executar migração inicial: {e}")
+            raise
+    else:
+        logger.info("Arquivo 'assinaturas.db' encontrado. Pulando migração inicial.")
     bot.run(TOKEN)

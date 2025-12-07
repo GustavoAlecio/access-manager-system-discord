@@ -4,10 +4,30 @@ import datetime
 from datetime import timedelta
 import re
 import logging
-from database import adicionar_assinatura
+from database import DB_DATETIME_FORMAT, DISPLAY_FORMAT, LEGACY_DATETIME_FORMAT, adicionar_assinatura
 from config import CARGO_ASSINANTE_NOME, APOSTAS_CHANNEL_ID
 
 logger = logging.getLogger(__name__)
+
+def parse_db_datetime_to_display(raw: str) -> str:
+    """
+    Converte string de data/hora do banco (ISO ou legado) para dd/mm/YYYY.
+    """
+    if not raw:
+        return "N/D"
+    for fmt in (DB_DATETIME_FORMAT, LEGACY_DATETIME_FORMAT):
+        try:
+            dt = datetime.datetime.strptime(raw, fmt)
+            return dt.strftime(DISPLAY_FORMAT)
+        except ValueError:
+            continue
+    # tentativa final com só a parte da data no formato legado
+    try:
+        dt = datetime.datetime.strptime(raw[:10], "%d/%m/%Y")
+        return dt.strftime(DISPLAY_FORMAT)
+    except Exception:
+        return raw  # devolve como veio, pra não perder informação
+
 
 async def liberar_usuario(guild: discord.Guild, user: discord.User, dias: int) -> str:
     """Libera um usuário no servidor com assinatura"""
@@ -74,19 +94,20 @@ async def atualizar_nickname(member: discord.Member, dias: int) -> None:
 def criar_embed_assinaturas(resumo, author):
     """Cria embed para o comando !assinaturas"""
     embed = discord.Embed(
-        title="📊 RELATÓRIO COMPLETO DE ASSINATURAS",
-        color=discord.Color.blue(),
-        timestamp=datetime.datetime.now()
-    )
-    
-    # Estatísticas gerais
+    title="📊 RELATÓRIO COMPLETO DE ASSINATURAS",
+    color=discord.Color.blue(),
+    timestamp=datetime.datetime.now()
+)
+
     embed.add_field(
         name="📈 ESTATÍSTICAS GERAIS",
         value=(
             f"✅ **Ativas:** {resumo['total_ativas']}\n"
-            f"⚠️ **A vencer (7 dias):** {resumo['total_pendentes']}\n"
+            f"⚠️ **A vencer (até 3 dias):** {resumo['total_pendentes']}\n"
             f"❌ **Expiradas:** {resumo['total_expiradas']}\n"
-            f"📊 **Total:** {resumo['total_ativas'] + resumo['total_expiradas']}"
+            f"📊 **Total:** {resumo['total_ativas'] + resumo['total_expiradas']}\n\n"
+            f"🔔 *Lembretes automáticos para o usuário são enviados com **3 dias** de antecedência "
+            f"e no dia da expiração.*"
         ),
         inline=False
     )
@@ -96,25 +117,35 @@ def criar_embed_assinaturas(resumo, author):
         ativas_text = ""
         for i, assinatura in enumerate(resumo['ativas'][:10], 1):
             username = assinatura[1]
-            data_exp = assinatura[2][:10]
+            raw_data_exp = assinatura[2]
             plano = assinatura[3]
             
+            data_exp_display = parse_db_datetime_to_display(raw_data_exp)
+            
             try:
-                data_expiracao = datetime.datetime.strptime(data_exp, "%d/%m/%Y").date()
-                hoje = datetime.datetime.now().date()
-                dias_restantes = (data_expiracao - hoje).days
-                
-                if dias_restantes > 0:
-                    emoji = "🟢" if dias_restantes > 7 else "🟡"
-                    status = f"{dias_restantes} dias"
-                else:
-                    emoji = "🔴"
-                    status = "VENCIDA"
+                dt_exp = None
+                for fmt in (DB_DATETIME_FORMAT, LEGACY_DATETIME_FORMAT):
+                    try:
+                        dt_exp = datetime.datetime.strptime(raw_data_exp, fmt)
+                        break
+                    except ValueError:
+                        continue
+                if dt_exp:
+                    data_expiracao = dt_exp.date()
+                    hoje = datetime.datetime.now().date()
+                    dias_restantes = (data_expiracao - hoje).days
+                    
+                    if dias_restantes > 0:
+                        emoji = "🟢" if dias_restantes > 5 else "🟡"
+                        status = f"{dias_restantes} dias"
+                    else:
+                        emoji = "🔴"
+                        status = "VENCIDA"
             except:
                 emoji = "⚪"
                 status = "??"
             
-            ativas_text += f"{emoji} `{username[:20]:20}` | {data_exp} | {plano} | {status}\n"
+            ativas_text += f"{emoji} `{username[:20]:20}` | {data_exp_display} | {plano} | {status}\n"
         
         if len(resumo['ativas']) > 10:
             ativas_text += f"\n... e mais {len(resumo['ativas']) - 10} assinaturas ativas"
@@ -130,24 +161,34 @@ def criar_embed_assinaturas(resumo, author):
         pendentes_text = ""
         for assinatura in resumo['pendentes'][:5]:
             username = assinatura[1]
-            data_exp = assinatura[2][:10]
+            raw_data_exp = assinatura[2]
             plano = assinatura[3]
             
+            data_exp_display = parse_db_datetime_to_display(raw_data_exp)
+            
             try:
-                data_expiracao = datetime.datetime.strptime(data_exp, "%d/%m/%Y").date()
-                hoje = datetime.datetime.now().date()
-                dias_restantes = (data_expiracao - hoje).days
-                
-                if dias_restantes == 0:
-                    status = "HOJE ⚠️"
-                elif dias_restantes == 1:
-                    status = "AMANHÃ ⚠️"
-                else:
-                    status = f"em {dias_restantes} dias"
+                dt_exp = None
+                for fmt in (DB_DATETIME_FORMAT, LEGACY_DATETIME_FORMAT):
+                    try:
+                        dt_exp = datetime.datetime.strptime(raw_data_exp, fmt)
+                        break
+                    except ValueError:
+                        continue
+                if dt_exp:
+                    data_expiracao = datetime.datetime.strptime(dt_exp, "%d/%m/%Y").date()
+                    hoje = datetime.datetime.now().date()
+                    dias_restantes = (data_expiracao - hoje).days
+                    
+                    if dias_restantes == 0:
+                        status = "HOJE ⚠️"
+                    elif dias_restantes == 1:
+                        status = "AMANHÃ ⚠️"
+                    else:
+                        status = f"em {dias_restantes} dias"
             except:
                 status = "??"
                 
-            pendentes_text += f"🔴 `{username[:20]:20}` | {data_exp} | {plano} | Vence {status}\n"
+            pendentes_text += f"🔴 `{username[:20]:20}` | {data_exp_display} | {plano} | Vence {status}\n"
         
         embed.add_field(
             name=f"⚠️ PRÓXIMAS A VENCER ({len(resumo['pendentes'])})",
@@ -160,9 +201,12 @@ def criar_embed_assinaturas(resumo, author):
         expiradas_text = ""
         for assinatura in resumo['expiradas'][:5]:
             username = assinatura[1]
-            data_exp = assinatura[2][:10]
+            raw_data_exp = assinatura[2]
             plano = assinatura[3]
-            expiradas_text += f"❌ `{username[:20]:20}` | {data_exp} | {plano}\n"
+            data_exp_display = parse_db_datetime_to_display(raw_data_exp)
+            expiradas_text += f"❌ `{username[:20]:20}` | {data_exp_display} | {plano}\n"
+        
+        
         
         embed.add_field(
             name=f"❌ EXPIRADAS RECENTES ({len(resumo['expiradas'])})",
@@ -184,11 +228,17 @@ async def gerar_arquivo_assinaturas(resumo, filename='relatorio_assinaturas.txt'
         f.write("ASSINATURAS ATIVAS:\n")
         f.write("-" * 50 + "\n")
         for assinatura in resumo['ativas']:
-            f.write(f"ID: {assinatura[0]} | Usuário: {assinatura[1]} | Expira: {assinatura[2]} | Plano: {assinatura[3]}\n")
+            data_exp_display = parse_db_datetime_to_display(assinatura[2])
+            f.write(
+                f"ID: {assinatura[0]} | Usuário: {assinatura[1]} | Expira: {data_exp_display} | Plano: {assinatura[3]}\n"
+            )
         
         f.write("\nASSINATURAS EXPIRADAS:\n")
         f.write("-" * 50 + "\n")
         for assinatura in resumo['expiradas']:
-            f.write(f"ID: {assinatura[0]} | Usuário: {assinatura[1]} | Expirou: {assinatura[2]} | Plano: {assinatura[3]}\n")
+            data_exp_display = parse_db_datetime_to_display(assinatura[2])
+            f.write(
+                f"ID: {assinatura[0]} | Usuário: {assinatura[1]} | Expirou: {data_exp_display} | Plano: {assinatura[3]}\n"
+            )
     
     return discord.File(filename)
