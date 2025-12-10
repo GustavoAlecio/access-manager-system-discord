@@ -38,6 +38,7 @@ class ChecagemAssinaturas(commands.Cog):
             "avisos_3": 0,
             "avisos_hoje": 0,
             "removidos": 0,
+            "removidos_info": [],
             "erros_dm": 0,
             "erros_permissao": 0,
         }
@@ -52,6 +53,8 @@ class ChecagemAssinaturas(commands.Cog):
             return
 
         for member in guild.members:
+            if member.bot:
+                continue
             if not member.nick or " | " not in member.nick:
                 continue
 
@@ -119,6 +122,7 @@ class ChecagemAssinaturas(commands.Cog):
                             resumo["avisos_3"] += 1
 
                             await dm_channel.send(mensagem, view=RenovarAssinaturaView(member))
+                            await asyncio.sleep(3)
                             logger.info(f"Enviado aviso para {member.name} ({dias_restantes} dias restantes)")
                         except Exception as e:
                             resumo["erros_dm"] += 1
@@ -134,6 +138,7 @@ class ChecagemAssinaturas(commands.Cog):
                             "Renove imediatamente clicando no botão abaixo:",
                             view=RenovarAssinaturaView(member)
                         )
+                        await asyncio.sleep(3)
                         registrar_aviso(member.id, "AVISO_EXPIRA_HOJE")
                         resumo["avisos_hoje"] += 1
                         logger.info(f"Aviso final enviado para {member.name}")
@@ -149,7 +154,7 @@ class ChecagemAssinaturas(commands.Cog):
                 try:
                     try:
                         dm_channel = await member.create_dm()
-                        if dias_restantes == 1:
+                        if dias_atras == 1:
                             texto_qtd = "há **1 dia**"
                         else:
                             texto_qtd = f"há **{dias_atras} dias**"
@@ -160,29 +165,26 @@ class ChecagemAssinaturas(commands.Cog):
                             "Para retornar, renove seu plano clicando no botão abaixo:",
                             view=RenovarAssinaturaView(member)
                         )
+                        await asyncio.sleep(3)
                     except Exception:
                         logger.warning(f"Não foi possível enviar DM para {member.name} antes da remoção")
-
-                    await member.remove_roles(cargo, reason="Assinatura expirada há 1 dia")
-                    await member.kick(reason="Assinatura expirada - Não renovada")
-
+                    motivo_remocao = f"Assinatura expirada há {dias_atras} dia(s)"
+                    await member.remove_roles(cargo, reason=motivo_remocao)
+                    await asyncio.sleep(3)
+                    await member.kick(reason=motivo_remocao + " - Não renovada")
+                    await asyncio.sleep(3)
                     atualizar_status_assinatura(
                         member.id, 
                         "EXPIRADA",
                         f"Removido do servidor com {dias_atras} dias de atraso após a expiração"
 )
                     resumo["removidos"] += 1
-                    logger.info(f"Usuário {member.name} removido do servidor (assinatura expirada há 1 dia)")
-                    
-                    canal_notificacao = guild.get_channel(NOTIFICACAO_CHANNEL_ID)
-                    if canal_notificacao:
-                        await canal_notificacao.send(
-                            f"📋 **RELATÓRIO DE EXPIRAÇÃO**\n"
-                            f"👤 Usuário: {member.mention} ({member.name})\n"
-                            f"📅 Data de expiração: {data_str}\n"
-                            f"🚫 Status: REMOVIDO DO SERVIDOR\n"
-                            f"⏰ Motivo: Assinatura não renovada após 1 dia da expiração"
-                        )
+                    resumo["removidos_info"].append(
+                        f"👤 {member.mention} ({member.name}) | Expirou em {data_str} | {dias_atras} dia(s) de atraso"
+                    )
+                    logger.info(
+                        f"Usuário {member.name} removido do servidor (assinatura expirada há {dias_atras} dia(s))"
+                    )
 
                 except discord.Forbidden:
                     resumo["erros_permissao"] += 1
@@ -202,7 +204,10 @@ class ChecagemAssinaturas(commands.Cog):
                     f"⚠️ Falhas de DM: **{resumo['erros_dm']}** | "
                     f"Falhas de permissão (kick/remover cargo): **{resumo['erros_permissao']}**"
                 )
+                if resumo["removidos_info"]:
+                    msg_resumo += "\n\n**Detalhes dos removidos:**\n" + "\n".join(resumo["removidos_info"])
                 await canal_notificacao.send(msg_resumo)
+                await asyncio.sleep(3)
             except Exception as e:
                 logger.error(f"Erro ao enviar resumo da checagem no canal de notificações: {e}")
 
