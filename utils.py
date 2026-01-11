@@ -35,9 +35,13 @@ async def liberar_usuario(guild: discord.Guild, user: discord.User, dias: int) -
     data_formatada = data_expiracao.strftime("%d/%m/%Y")
     
     if dias == 30:
-        nome_plano = "Plano 30 dias"
+        nome_plano = "Plano mensal"
     elif dias == 90:
-        nome_plano = "Plano 90 dias"
+        nome_plano = "Plano trimestral"
+    elif dias == 180:
+        nome_plano = "Plano semestral"
+    elif dias == 365:
+        nome_plano = "Plano anual"
     else:
         nome_plano = "ASSINANTE"
         
