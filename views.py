@@ -140,8 +140,23 @@ class SuporteRenovacaoView(View):
         super().__init__(timeout=timeout)
         self.user = user
 
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        if not interaction.user.guild_permissions.manage_messages:
+            await interaction.response.send_message(
+                "Você não tem permissões para liberar planos.",
+                ephemeral=True
+            )
+            return False
+        return True
+
     @discord.ui.button(label="Liberar Plano Mensal", style=discord.ButtonStyle.primary)
     async def liberar_plano_mensal(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+        msg = (
+            f"✅ Plano Mensal ativado para {self.user.mention}. "
+            f"Liberado por {interaction.user.mention}"
+        )
+
         try:
             cargo = discord.utils.get(interaction.guild.roles, name=CARGO_ASSINANTE_NOME)
             if cargo and cargo not in self.user.roles:
@@ -152,13 +167,11 @@ class SuporteRenovacaoView(View):
             if member:
                 await atualizar_nickname(member, 30)
             
-            await interaction.response.send_message(
-                f"✅ Plano Mensal ativado para {self.user.mention}.", ephemeral=True
-            )
+            await interaction.response.send_message(msg, ephemeral=True)
             
             canal = interaction.client.get_channel(SUPORTE_CHANNEL_ID)
             if canal:
-                await canal.send(f"✅ Plano Mensal ativado para {self.user.mention}.")
+                await canal.send(msg)
             
             try:
                 dm_channel = await self.user.create_dm()
@@ -171,7 +184,7 @@ class SuporteRenovacaoView(View):
         except discord.errors.NotFound:
             canal = interaction.client.get_channel(SUPORTE_CHANNEL_ID)
             if canal:
-                await canal.send(f"✅ Plano Mensal ativado para {self.user.mention}.")
+                await canal.send(msg)
             
             import logging
             logger = logging.getLogger(__name__)
@@ -183,6 +196,12 @@ class SuporteRenovacaoView(View):
 
     @discord.ui.button(label="Liberar Plano Trimestral", style=discord.ButtonStyle.success)
     async def liberar_plano_trimestral(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+        msg = (
+            f"✅ Plano Trimestral ativado para {self.user.mention}. "
+            f"Liberado por {interaction.user.mention}"
+        )
+
         try:
             cargo = discord.utils.get(interaction.guild.roles, name=CARGO_ASSINANTE_NOME)
             if cargo and cargo not in self.user.roles:
@@ -193,13 +212,12 @@ class SuporteRenovacaoView(View):
             if member:
                 await atualizar_nickname(member, 90)
             
-            await interaction.response.send_message(
-                f"✅ Plano Trimestral ativado para {self.user.mention}.", ephemeral=True
-            )
+            
+            await interaction.response.send_message(msg, ephemeral=True)
             
             canal = interaction.client.get_channel(SUPORTE_CHANNEL_ID)
             if canal:
-                await canal.send(f"✅ Plano Trimestral ativado para {self.user.mention}.")
+                await canal.send(msg)
             
             try:
                 dm_channel = await self.user.create_dm()
@@ -212,8 +230,8 @@ class SuporteRenovacaoView(View):
         except discord.errors.NotFound:
             canal = interaction.client.get_channel(SUPORTE_CHANNEL_ID)
             if canal:
-                await canal.send(f"✅ Plano Trimestral ativado para {self.user.mention}.")
-            
+                await canal.send(msg)
+
             import logging
             logger = logging.getLogger(__name__)
             logger.warning("Interação expirada. Mensagem enviada diretamente no canal.")
@@ -225,6 +243,12 @@ class SuporteRenovacaoView(View):
             
     @discord.ui.button(label="Liberar Plano Semestral", style=discord.ButtonStyle.success)
     async def liberar_plano_semestral(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+        msg = (
+            f"✅ Plano Semestral ativado para {self.user.mention}. "
+            f"Liberado por {interaction.user.mention}"
+        )
+
         try:
             cargo = discord.utils.get(interaction.guild.roles, name=CARGO_ASSINANTE_NOME)
             if cargo and cargo not in self.user.roles:
@@ -235,13 +259,12 @@ class SuporteRenovacaoView(View):
             if member:
                 await atualizar_nickname(member, 180)
             
-            await interaction.response.send_message(
-                f"✅ Plano Semestral ativado para {self.user.mention}.", ephemeral=True
-            )
+            
+            await interaction.response.send_message(msg, ephemeral=True)
             
             canal = interaction.client.get_channel(SUPORTE_CHANNEL_ID)
             if canal:
-                await canal.send(f"✅ Plano Semestral ativado para {self.user.mention}.")
+                await canal.send(msg)
             
             try:
                 dm_channel = await self.user.create_dm()
@@ -254,7 +277,8 @@ class SuporteRenovacaoView(View):
         except discord.errors.NotFound:
             canal = interaction.client.get_channel(SUPORTE_CHANNEL_ID)
             if canal:
-                await canal.send(f"✅ Plano Semestral ativado para {self.user.mention}.")
+                await canal.send(msg)
+
             
             import logging
             logger = logging.getLogger(__name__)
@@ -266,6 +290,12 @@ class SuporteRenovacaoView(View):
             
     @discord.ui.button(label="Liberar Plano Anual", style=discord.ButtonStyle.success)
     async def liberar_plano_anual(self, interaction: discord.Interaction, button: discord.ui.Button):
+
+        msg = (
+            f"✅ Plano Anual ativado para {self.user.mention}. "
+            f"Liberado por {interaction.user.mention}"
+        )
+
         try:
             cargo = discord.utils.get(interaction.guild.roles, name=CARGO_ASSINANTE_NOME)
             if cargo and cargo not in self.user.roles:
@@ -276,13 +306,11 @@ class SuporteRenovacaoView(View):
             if member:
                 await atualizar_nickname(member, 365)
             
-            await interaction.response.send_message(
-                f"✅ Plano Anual ativado para {self.user.mention}.", ephemeral=True
-            )
+            await interaction.response.send_message(msg, ephemeral=True)
             
             canal = interaction.client.get_channel(SUPORTE_CHANNEL_ID)
             if canal:
-                await canal.send(f"✅ Plano Anual ativado para {self.user.mention}.")
+                await canal.send(msg)
             
             try:
                 dm_channel = await self.user.create_dm()
@@ -295,8 +323,8 @@ class SuporteRenovacaoView(View):
         except discord.errors.NotFound:
             canal = interaction.client.get_channel(SUPORTE_CHANNEL_ID)
             if canal:
-                await canal.send(f"✅ Plano Anual ativado para {self.user.mention}.")
-            
+                await canal.send(msg)
+
             import logging
             logger = logging.getLogger(__name__)
             logger.warning("Interação expirada. Mensagem enviada diretamente no canal.")
