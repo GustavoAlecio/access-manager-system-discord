@@ -142,6 +142,9 @@ class SuporteRenovacaoView(View):
 
     @discord.ui.button(label="Liberar Plano Mensal", style=discord.ButtonStyle.primary)
     async def liberar_plano_mensal(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not interaction.user.guild_permissions.administrator:
+            await interaction.response.send_message("Você não tem permissões para confirmar renovações.", ephemeral=True)
+            return
         try:
             cargo = discord.utils.get(interaction.guild.roles, name=CARGO_ASSINANTE_NOME)
             if cargo and cargo not in self.user.roles:
@@ -183,6 +186,9 @@ class SuporteRenovacaoView(View):
 
     @discord.ui.button(label="Liberar Plano Trimestral", style=discord.ButtonStyle.success)
     async def liberar_plano_trimestral(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not interaction.user.guild_permissions.administrator:
+            await interaction.response.send_message("Você não tem permissões para confirmar renovações.", ephemeral=True)
+            return
         try:
             cargo = discord.utils.get(interaction.guild.roles, name=CARGO_ASSINANTE_NOME)
             if cargo and cargo not in self.user.roles:
@@ -225,6 +231,9 @@ class SuporteRenovacaoView(View):
             
     @discord.ui.button(label="Liberar Plano Semestral", style=discord.ButtonStyle.success)
     async def liberar_plano_semestral(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not interaction.user.guild_permissions.administrator:
+            await interaction.response.send_message("Você não tem permissões para confirmar renovações.", ephemeral=True)
+            return
         try:
             cargo = discord.utils.get(interaction.guild.roles, name=CARGO_ASSINANTE_NOME)
             if cargo and cargo not in self.user.roles:
@@ -266,6 +275,9 @@ class SuporteRenovacaoView(View):
             
     @discord.ui.button(label="Liberar Plano Anual", style=discord.ButtonStyle.success)
     async def liberar_plano_anual(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not interaction.user.guild_permissions.administrator:
+            await interaction.response.send_message("Você não tem permissões para confirmar renovações.", ephemeral=True)
+            return
         try:
             cargo = discord.utils.get(interaction.guild.roles, name=CARGO_ASSINANTE_NOME)
             if cargo and cargo not in self.user.roles:
